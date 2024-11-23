@@ -812,19 +812,4 @@ inline bool IsBlockPruned(const CBlockIndex* pblockindex)
     return (fHavePruned && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0);
 }
 
-class CMainCleanup
-{
-public:
-    CMainCleanup() {}
-    ~CMainCleanup() {
-        // block headers
-        BlockMap::iterator it1 = g_blockman.m_block_index.begin();
-        for (; it1 != g_blockman.m_block_index.end(); it1++)
-            delete (*it1).second;
-        g_blockman.m_block_index.clear();
-    }
-};
-static CMainCleanup instance_of_cmaincleanup;
-
-
 #endif // BITCOIN_VALIDATION_H
