@@ -1154,6 +1154,9 @@ bool CChainState::IsInitialBlockDownload() const
         return true;
     LogPrintf("Leaving InitialBlockDownload (latching to false)\n");
     m_cached_finished_ibd.store(true, std::memory_order_relaxed);
+	
+	UnloadBlockIndex();
+	
     return false;
 }
 
@@ -2605,8 +2608,6 @@ void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainPar
       evoDb->GetMemoryUsage() * (1.0 / (1<<20)),
       !warningMessages.empty() ? strprintf(" warning='%s'", warningMessages) : "");
 	
-	CMainCleanup();
-
 }
 
 /** Disconnect m_chain's tip.
