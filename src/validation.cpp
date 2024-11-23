@@ -4142,7 +4142,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
         return AbortNode(state, std::string("System error: ") + e.what());
     }
 
-    g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::ALWAYS);
+    g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::PERIODIC);
 
 /*
 	if (g_chainstate && g_chainstate->CanFlushToDisk()) {
