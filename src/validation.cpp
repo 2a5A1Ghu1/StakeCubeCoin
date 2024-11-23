@@ -78,6 +78,8 @@ static const unsigned int UNDOFILE_CHUNK_SIZE = 0x100000; // 1 MiB
 static constexpr std::chrono::hours DATABASE_WRITE_INTERVAL{1};
 /** Time to wait between flushing chainstate to disk. */
 static constexpr std::chrono::hours DATABASE_FLUSH_INTERVAL{2};
+/** Time to wait between flushing COINS cache to disk. */
+static constexpr std::chrono::minutes COINS_CACHE_FLUSH_INTERVAL{5};
 /** Maximum age of our tip for us to be considered current for fee estimation */
 static constexpr std::chrono::hours MAX_FEE_ESTIMATION_TIP_AGE{3};
 
@@ -2445,6 +2447,10 @@ bool CChainState::FlushStateToDisk(
         bool fPeriodicWrite = mode == FlushStateMode::PERIODIC && nNow > nLastWrite + DATABASE_WRITE_INTERVAL;
         // It's been very long since we flushed the cache. Do this infrequently, to optimize cache usage.
         bool fPeriodicFlush = mode == FlushStateMode::PERIODIC && nNow > nLastFlush + DATABASE_FLUSH_INTERVAL;
+
+        // It's been very long since we flushed the cache. Do this infrequently, to optimize cache usage.
+        bool fPeriodicCoinFlush = mode == FlushStateMode::PERIODIC && nNow > nLastFlush + COINS_CACHE_FLUSH_INTERVAL;
+
         // Combine all conditions that result in a full cache flush.
         fDoFullFlush = (mode == FlushStateMode::ALWAYS) || fCacheLarge || fCacheCritical || fEvoDbCacheCritical || fPeriodicFlush || fFlushForPrune;
         // Write blocks and block index to disk.
@@ -2489,6 +2495,29 @@ bool CChainState::FlushStateToDisk(
             }
             nLastWrite = nNow;
         }
+
+        if (fPeriodicCoinFlush && !CoinsTip().GetBestBlock().IsNull()) {
+            LOG_TIME_SECONDS(strprintf("write coins cache to disk (%d coins, %.2fkB)",
+                coins_count, coins_mem_usage / 1000));
+
+            // Typical Coin structures on disk are around 48 bytes in size.
+            // Pushing a new one to the database can cause it to be written
+            // twice (once in the log, and once in the tables). This is already
+            // an overestimation, as most will delete an existing entry or
+            // overwrite one. Still, use a conservative safety factor of 2.
+            if (!CheckDiskSpace(GetDataDir(), 48 * 2 * 2 * CoinsTip().GetCacheSize())) {
+                return AbortNode(state, "Disk space is too low!", _("Error: Disk space is too low!").translated, CClientUIInterface::MSG_NOPREFIX);
+            }
+            // Flush the chainstate (which may refer to block index entries).
+            if (!CoinsTip().Flush())
+                return AbortNode(state, "Failed to write to coin database");
+            if (!evoDb->CommitRootTransaction()) {
+                return AbortNode(state, "Failed to commit EvoDB");
+            }
+            nLastFlush = nNow;
+            full_flush_completed = true;
+        }
+
         // Flush best chain related state. This can only be done if the blocks / block index write was also done.
         if (fDoFullFlush && !CoinsTip().GetBestBlock().IsNull()) {
             LOG_TIME_SECONDS(strprintf("write coins cache to disk (%d coins, %.2fkB)",
