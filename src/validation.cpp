@@ -4090,7 +4090,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     }
 
     if (g_chainstate && g_chainstate->CanFlushToDisk()) {
-        g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::NONE);
+        g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::PERIODIC);
     }
 
     CheckBlockIndex(chainparams.GetConsensus());
