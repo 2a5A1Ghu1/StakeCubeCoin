@@ -3541,10 +3541,13 @@ void CChainState::ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pi
             CBlockIndex *pindex = queue.front();
             queue.pop_front();
             pindex->nChainTx = (pindex->pprev ? pindex->pprev->nChainTx : 0) + pindex->nTx;
+            pindex->nSequenceId = nBlockSequenceId++;
+/*
             {
                 LOCK(cs_nBlockSequenceId);
                 pindex->nSequenceId = nBlockSequenceId++;
             }
+*/
             if (m_chain.Tip() == nullptr || !setBlockIndexCandidates.value_comp()(pindex, m_chain.Tip())) {
                 if (!(pindex->nStatus & BLOCK_CONFLICT_CHAINLOCK)) {
                     setBlockIndexCandidates.insert(pindex);
@@ -3558,6 +3561,9 @@ void CChainState::ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pi
                 m_blockman.m_blocks_unlinked.erase(it);
             }
         }
+
+		CMainCleanup();
+
     } else {
         if (pindexNew->pprev && pindexNew->pprev->IsValid(BLOCK_VALID_TREE)) {
             m_blockman.m_blocks_unlinked.insert(std::make_pair(pindexNew->pprev, pindexNew));
@@ -4108,7 +4114,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
         return AbortNode(state, std::string("System error: ") + e.what());
     }
 
-    g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::PERIODIC);
+    g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::ALWAYS);
 
 /*
 	if (g_chainstate && g_chainstate->CanFlushToDisk()) {
