@@ -1155,8 +1155,6 @@ bool CChainState::IsInitialBlockDownload() const
     LogPrintf("Leaving InitialBlockDownload (latching to false)\n");
     m_cached_finished_ibd.store(true, std::memory_order_relaxed);
 	
-	UnloadBlockIndex();
-	
     return false;
 }
 
@@ -4110,9 +4108,13 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
         return AbortNode(state, std::string("System error: ") + e.what());
     }
 
-    if (g_chainstate && g_chainstate->CanFlushToDisk()) {
+    g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::PERIODIC);
+
+/*
+	if (g_chainstate && g_chainstate->CanFlushToDisk()) {
         g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::PERIODIC);
     }
+*/
 
     CheckBlockIndex(chainparams.GetConsensus());
 
