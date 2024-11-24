@@ -2449,7 +2449,7 @@ bool CChainState::FlushStateToDisk(
         bool fPeriodicFlush = mode == FlushStateMode::PERIODIC && nNow > nLastFlush + DATABASE_FLUSH_INTERVAL;
 
         // It's been very long since we flushed the cache. Do this infrequently, to optimize cache usage.
-        bool fPeriodicMemoryFlush = mode == FlushStateMode::PERIODIC && nNow > nLastFlush + MEMORY_FLUSH_INTERVAL;
+        bool fPeriodicMemoryFlush = ((mode == FlushStateMode::MEMORY) || (nNow > nLastFlush + MEMORY_FLUSH_INTERVAL));
 
         // Combine all conditions that result in a full cache flush.
         fDoFullFlush = (mode == FlushStateMode::ALWAYS) || fCacheLarge || fCacheCritical || fEvoDbCacheCritical || fPeriodicFlush || fFlushForPrune;
@@ -4123,7 +4123,12 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
         return AbortNode(state, std::string("System error: ") + e.what());
     }
 
-    g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::PERIODIC);
+    if (fInitialBlockDownload) {
+		g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::MEMORY);
+	} else {
+		g_chainstate->FlushStateToDisk(chainparams, state, FlushStateMode::PERIODIC);
+	}
+		
 
 /*
 	if (g_chainstate && g_chainstate->CanFlushToDisk()) {
