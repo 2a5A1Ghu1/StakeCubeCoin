@@ -2496,7 +2496,7 @@ bool CChainState::FlushStateToDisk(
             }
             nLastWrite = nNow;
 
-			if (fPeriodicMemoryFlush) { nLastFlush = nNow; )
+			if (fPeriodicMemoryFlush) { nLastFlush = nNow; }
 
         }
 
